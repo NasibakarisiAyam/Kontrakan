@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .ok { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        input { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Login Debug Test</h1>
+    
+    <h2>1. Server Status</h2>
+    <div id="backendStatus" class="test-result info">检查中...</div>
+    <div id="frontendStatus" class="test-result info">检查中...</div>
+
+    <h2>2. Test Login</h2>
+    <div>
+        <label>Email:</label>
+        <input type="email" id="email" value="1bc@gmail.com" />
+        
+        <label>Password:</label>
+        <input type="password" id="password" value="123456" />
+        
+        <button onclick="testLogin()">Test Login</button>
+    </div>
+
+    <h2>3. Console Log</h2>
+    <div id="log" class="log">Waiting for test...</div>
+
+    <script>
+        const log = (msg, type = 'info') => {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const line = `[${timestamp}] ${msg}`;
+            logDiv.innerHTML += line + '<br/>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(line);
+        };
+
+        const checkBackendStatus = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/test');
+                if (response.ok) {
+                    document.getElementById('backendStatus').className = 'test-result ok';
+                    document.getElementById('backendStatus').textContent = '✓ Backend is running on http://localhost:5000';
+                    log('Backend: OK');
+                } else {
+                    throw new Error('Backend returned ' + response.status);
+                }
+            } catch (error) {
+                document.getElementById('backendStatus').className = 'test-result error';
+                document.getElementById('backendStatus').textContent = '✗ Backend is NOT running. Error: ' + error.message;
+                log('Backend: FAILED - ' + error.message);
+            }
+        };
+
+        const checkFrontendStatus = () => {
+            document.getElementById('frontendStatus').className = 'test-result ok';
+            document.getElementById('frontendStatus').textContent = '✓ Frontend is loaded';
+            log('Frontend: OK');
+        };
+
+        const testLogin = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            log('--- Test Login Started ---');
+            log('Email: ' + email);
+            log('Password: ' + password);
+            
+            try {
+                log('Making API request...');
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                log('Response Status: ' + response.status);
+                
+                const data = await response.json();
+                log('Response Data: ' + JSON.stringify(data));
+                
+                if (data.success) {
+                    log('✓ Login Successful!', 'success');
+                    log('Token: ' + data.data.token.substring(0, 30) + '...');
+                } else {
+                    log('✗ Login Failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                log('✗ Error: ' + error.message, 'error');
+                log('Stack: ' + error.stack, 'error');
+            }
+            log('--- Test Login Ended ---');
+        };
+
+        // Check status on load
+        window.addEventListener('load', () => {
+            checkFrontendStatus();
+            checkBackendStatus();
+        });
+    </script>
+</body>
+</html>
